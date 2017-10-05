@@ -205,7 +205,8 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 	GList *l;
 	GSList *sl;
 	struct srd_channel *pdch;
-	int *new_channelmap, new_channelnum, num_required_channels, i;
+	int *new_channelmap, new_channelnum;
+	unsigned int num_required_channels, i;
 	char *channel_id;
 
 	srd_dbg("Setting channels for instance %s with list of %d channels.",
@@ -304,7 +305,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *decoder_id, GHashTable *options)
 {
-	int i;
+	unsigned int i;
 	struct srd_decoder *dec;
 	struct srd_decoder_inst *di;
 	char *inst_id;
@@ -651,7 +652,7 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
  */
 SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *initial_pins)
 {
-	int i;
+	unsigned int i;
 	GString *s;
 
 	if (!di) {
@@ -849,7 +850,8 @@ static void update_old_pins_array(struct srd_decoder_inst *di,
 		const uint8_t *sample_pos)
 {
 	uint8_t sample;
-	int i, byte_offset, bit_offset;
+	unsigned int i;
+	int byte_offset, bit_offset;
 
 	if (!di || !di->dec_channelmap || !sample_pos)
 		return;
@@ -865,7 +867,8 @@ static void update_old_pins_array(struct srd_decoder_inst *di,
 static void update_old_pins_array_initial_pins(struct srd_decoder_inst *di)
 {
 	uint8_t sample;
-	int i, byte_offset, bit_offset;
+	unsigned int i;
+	int byte_offset, bit_offset;
 	const uint8_t *sample_pos;
 
 	if (!di || !di->dec_channelmap)

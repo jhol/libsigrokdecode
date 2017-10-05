@@ -455,7 +455,7 @@ static int get_term_type(const char *v)
  */
 static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
 {
-	int i;
+	unsigned int i;
 	uint8_t sample;
 	const uint8_t *sample_pos;
 	int byte_offset, bit_offset;

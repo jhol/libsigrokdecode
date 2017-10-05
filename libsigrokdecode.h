@@ -234,7 +234,7 @@ struct srd_decoder_inst {
 	void *py_inst;
 	char *inst_id;
 	GSList *pd_output;
-	int dec_num_channels;
+	unsigned int dec_num_channels;
 	int *dec_channelmap;
 	int data_unitsize;
 	uint8_t *channel_samples;
