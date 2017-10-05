@@ -236,7 +236,7 @@ struct srd_decoder_inst {
 	GSList *pd_output;
 	unsigned int dec_num_channels;
 	int *dec_channelmap;
-	int data_unitsize;
+	unsigned int data_unitsize;
 	uint8_t *channel_samples;
 	GSList *next_di;
 
