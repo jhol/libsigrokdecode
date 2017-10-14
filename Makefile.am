@@ -39,6 +39,7 @@ libsigrokdecode_la_SOURCES = \
 	session.c \
 	decoder.c \
 	instance.c \
+	match.c \
 	log.c \
 	util.c \
 	exception.c \
