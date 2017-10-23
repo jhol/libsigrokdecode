@@ -191,9 +191,10 @@ static gboolean match_condition_##width(					\
 										\
 static gboolean quick_search_matches_##width(					\
 	const struct condition_masks_##width *const masks,			\
-	const unsigned int num_conditions, const uint8_t **const sample_pos,	\
-	const size_t num_samples, const size_t unitsize,			\
-	sample_type *prev_sample, sample_type *sample, sample_type *change)	\
+	const unsigned int num_active_conditions,				\
+	const uint8_t **const sample_pos, const size_t num_samples,		\
+	const size_t unitsize, sample_type *prev_sample, sample_type *sample,	\
+	sample_type *change)							\
 {										\
 	unsigned int i;								\
 	const uint8_t *const end_sample_pos = *sample_pos +			\
@@ -203,7 +204,7 @@ static gboolean quick_search_matches_##width(					\
 		*sample = unpack_sample_##width(*sample_pos);			\
 		*change = *sample ^ *prev_sample;				\
 										\
-		for (i = 0; i != num_conditions; i++)				\
+		for (i = 0; i != num_active_conditions; i++)			\
 			if (G_UNLIKELY (match_condition_##width(		\
 				masks + i, *sample, *change)))			\
 				return TRUE;					\
@@ -259,7 +260,7 @@ static gboolean find_match_##width(struct srd_decoder_inst *di)			\
 		if (num_active_conditions) {					\
 			/* Search for any matching conditions */		\
 			any_match = quick_search_matches_##width(masks,		\
-				num_conditions,	&sample_pos,			\
+				num_active_conditions,	&sample_pos,		\
 				num_applicable_samples, unitsize,		\
 				&prev_sample, &sample, &change);		\
 		} else if (num_applicable_samples) {				\
