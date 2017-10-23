@@ -201,13 +201,14 @@ static gboolean quick_search_matches_##width(					\
 	while (*sample_pos < end_sample_pos) {					\
 		*prev_sample = *sample;						\
 		*sample = unpack_sample_##width(*sample_pos);			\
-		*sample_pos += unitsize;					\
 		*change = *sample ^ *prev_sample;				\
 										\
 		for (i = 0; i != num_conditions; i++)				\
 			if (G_UNLIKELY (match_condition_##width(		\
 				masks + i, *sample, *change)))			\
 				return TRUE;					\
+										\
+		*sample_pos += unitsize;					\
 	}									\
 										\
 	return FALSE;								\
