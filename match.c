@@ -83,25 +83,31 @@ static void update_old_pins_array_initial_pins(struct srd_decoder_inst *di)
 static gboolean match_skip_terms(struct srd_decoder_inst *di,
 	const uint64_t num_samples_processed) {
 	const GSList *l, *m;
-	gboolean only_skip, all_skips_complete;
+	gboolean skip_complete = FALSE;
 	for (l = di->condition_list; l; l = l->next) {
-		all_skips_complete = TRUE;
-		only_skip = TRUE;
 		for (m = l->data; m; m = m->next) {
 			struct srd_term *const term = m->data;
 			if (term->type == SRD_TERM_SKIP) {
 				term->num_samples_already_skipped +=
 					num_samples_processed;
-				if (term->num_samples_already_skipped <
+				if (term->num_samples_already_skipped >=
 					term->num_samples_to_skip)
-					all_skips_complete = FALSE;
-			} else {
-				only_skip = FALSE;
+					skip_complete = TRUE;
 			}
 
 		}
+	}
 
-		if (only_skip && all_skips_complete)
+	return skip_complete;
+}
+
+static gboolean any_matching_skips(const GSList *term_list) {
+	const GSList *l;
+	for (l = term_list; l; l = l->next) {
+		struct srd_term *const term = l->data;
+		if (term->type == SRD_TERM_SKIP &&
+			term->num_samples_already_skipped >=
+			term->num_samples_to_skip)
 			return TRUE;
 	}
 
@@ -126,7 +132,7 @@ static sample_type unpack_sample_##width(const uint8_t *ptr)			\
 										\
 static void make_condition_masks_##width(struct srd_decoder_inst *const di,	\
 	struct condition_masks_##width *const condition_masks_array,		\
-	size_t *const condition_nums_array,					\
+	int *const mask_nums_array,						\
 	uint64_t num_samples_to_process,					\
 	size_t *const num_active_conditions,					\
 	uint64_t *const num_applicable_samples)					\
@@ -172,9 +178,11 @@ static void make_condition_masks_##width(struct srd_decoder_inst *const di,	\
 										\
 		if (masks->high || masks->low ||				\
 			masks->change || masks->no_change) {			\
-			condition_nums_array[*num_active_conditions] =		\
-				condition_num;					\
+			mask_nums_array[condition_num] = 			\
+				*num_active_conditions;				\
 			(*num_active_conditions)++;				\
+		} else {							\
+			mask_nums_array[condition_num] = -1;			\
 		}								\
 	}									\
 }										\
@@ -223,6 +231,7 @@ static gboolean find_match_##width(struct srd_decoder_inst *di)			\
 	uint64_t num_samples_to_process =					\
 		di->abs_end_samplenum - di->abs_cur_samplenum;			\
 	sample_type prev_sample = 0, sample = 0, change = 0;			\
+	const GSList *l;							\
 	unsigned int i;								\
 										\
 	const unsigned int unitsize = di->data_unitsize;			\
@@ -234,8 +243,7 @@ static gboolean find_match_##width(struct srd_decoder_inst *di)			\
 	struct condition_masks_##width *const masks =				\
 		g_malloc0_n(num_conditions,					\
 			sizeof(struct condition_masks_##width));		\
-	size_t *const mask_condition_nums =					\
-		g_malloc_n(num_conditions, sizeof(size_t));			\
+	int *const mask_nums = g_malloc_n(num_conditions, sizeof(int));	\
 										\
 	/* di->match_array is NULL here. Create a new GArray. */		\
 	di->match_array = g_array_sized_new(					\
@@ -252,7 +260,7 @@ static gboolean find_match_##width(struct srd_decoder_inst *di)			\
 			sample |= 1ULL << di->dec_channelmap[i];		\
 										\
 	while (num_samples_to_process && !any_match) {				\
-		make_condition_masks_##width(di, masks, mask_condition_nums,	\
+		make_condition_masks_##width(di, masks, mask_nums,		\
 			num_samples_to_process, &num_active_conditions,		\
 			&num_applicable_samples);				\
 										\
@@ -278,20 +286,23 @@ static gboolean find_match_##width(struct srd_decoder_inst *di)			\
 		const uint64_t num_samples_processed =				\
 			(sample_pos - start_sample_pos) / unitsize;		\
 		num_samples_to_process -= num_samples_processed;		\
-		any_match |= match_skip_terms(di, num_samples_processed);	\
+		any_match = any_match ||					\
+			match_skip_terms(di, num_samples_processed);		\
 	}									\
 										\
 	/* If any matched recalculate the results for the match array */	\
 	if (any_match) {							\
-		for (i = 0; i != num_active_conditions; i++) {			\
-			di->match_array->data[mask_condition_nums[i]] =		\
+		for (i = 0, l = di->condition_list; l; i++, l = l->next) {	\
+			const int mask_num = mask_nums[i];			\
+			di->match_array->data[i] = (mask_num != -1 && 		\
 				match_condition_##width(			\
-					masks + i, sample, change);		\
+					masks + mask_num, sample, change)) ||	\
+				any_matching_skips(l->data);			\
 		}								\
 	}									\
 										\
 	g_free(masks);								\
-	g_free(mask_condition_nums);						\
+	g_free(mask_nums);							\
 										\
 	di->abs_cur_samplenum = (sample_pos - di->inbuf) / unitsize +		\
 		di->abs_start_samplenum;					\
